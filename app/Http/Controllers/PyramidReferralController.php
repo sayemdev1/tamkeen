@@ -115,7 +115,12 @@ class PyramidReferralController extends Controller
     public function viewReferralTree($userId)
     {
         $levels = [];
-    
+
+        // Fetch the user details (including referral code)
+        $user = User::select('id', 'name', 'email', 'phone', 'referral_code')
+            ->where('id', $userId)
+            ->first();
+
         // Fetch referral profits grouped by level
         $profitsByLevel = DB::table('pyramid_referral_profits')
             ->select('level', DB::raw('SUM(profit) as total_profit'))
@@ -123,14 +128,14 @@ class PyramidReferralController extends Controller
             ->groupBy('level')
             ->orderBy('level')
             ->get();
-    
+
         // Organize referrals by levels
         foreach ($profitsByLevel as $profit) {
             $levelReferrals = PyramidReferralProfit::where('referrer_id', $userId)
                 ->where('level', $profit->level)
                 ->with(['user', 'membershipLevel']) // Include referred user and membership level details
                 ->get();
-    
+
             $levels[] = [
                 'level' => $profit->level,
                 'referrals_count' => $levelReferrals->count(),
@@ -163,13 +168,15 @@ class PyramidReferralController extends Controller
                 }),
             ];
         }
-    
+
         return response()->json([
             'user_id' => $userId,
+            'user' => $user, // Include user details in response
             'referral_tree' => $levels,
         ]);
     }
-    
+
+
 
     public function viewUserProfits($userId)
     {
